@@ -17,7 +17,7 @@ The stress index (0–100) adds up three signals:
 | Hesitation spike | 30 | The single most off-tempo beat |
 | Tempo drift | 30 | How much the average tempo sped up or slowed down |
 
-If the clicking stalls after the question, the index jumps to 88. A score of 85 or more is a **LIE**.
+If the clicking stalls after the question, the index jumps to 88. A score of 30 or more is a **LIE**.
 
 It is a party game: a change in rhythm shows nervousness or distraction, not proof of lying.
 

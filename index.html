@@ -168,7 +168,7 @@ kbd {
 .meta .big { font: 600 22px/1.1 var(--font-data); font-variant-numeric: tabular-nums; }
 .meter { height: 10px; background: var(--grid); position: relative; }
 .meter i { position: absolute; inset: 0 auto 0 0; background: var(--ok); width: 0; transition: width 0.4s; }
-.meter::after { content: ""; position: absolute; left: 85%; top: -4px; bottom: -4px; width: 2px; background: var(--ink); }
+.meter::after { content: ""; position: absolute; left: 30%; top: -4px; bottom: -4px; width: 2px; background: var(--ink); }
 .meter-scale { display: flex; justify-content: space-between; font: 400 11px/1 var(--font-data); color: var(--muted); }
 .reasons { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
 .reasons li { display: grid; grid-template-columns: 18px 1fr; gap: 8px; font-size: 14px; }
@@ -253,7 +253,7 @@ tr.example td.v-truth, tr.example td.v-lie { opacity: 0.7; }
       <div class="progress" id="v-progress" hidden><i id="v-progress-bar"></i></div>
       <div id="v-meter" hidden>
         <div class="meter"><i id="v-meter-bar"></i></div>
-        <div class="meter-scale" style="position: relative"><span>calm</span><span style="position: absolute; left: 85%; transform: translateX(-50%)">threshold 85</span><span>stressed</span></div>
+        <div class="meter-scale" style="position: relative"><span>calm</span><span style="position: absolute; left: 30%; transform: translateX(-50%)">threshold 30</span><span>stressed</span></div>
       </div>
       <ul class="reasons" id="reasons">
         <li>The analyser compares the beats you click right after the question with your own steady rhythm before it.</li>
@@ -299,7 +299,7 @@ tr.example td.v-truth, tr.example td.v-lie { opacity: 0.7; }
     postMaxMs: 7000,    // stop measuring after this long
     lostMs: 2500,       // a gap this long (outside a question) restarts calibration
     maxCv: 0.3,         // baseline must be at least this steady
-    threshold: 85,      // stress index at or above this = LIE
+    threshold: 30,      // stress index at or above this = LIE
     chartMs: 10000,
   };
 
