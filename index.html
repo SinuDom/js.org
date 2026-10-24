@@ -1,0 +1,742 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Rhythm Polygraph</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600&family=Big+Shoulders+Display:wght@700;800&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: one instrument column — strip chart on top, gauges under it, verdict + log side by side below. */
+:root {
+  --paper: #f1f5f0;
+  --panel: #fbfdfa;
+  --grid: #dbe6d8;
+  --grid-strong: #b9cdb5;
+  --ink: #1b2733;
+  --muted: #5a6a63;
+  --line: #c8d6c4;
+  --pen: #2150a8;
+  --alarm: #c42f29;
+  --ok: #1d7a49;
+  --warn: #a8670f;
+  --font-display: "Big Shoulders Display", "Arial Narrow", Impact, sans-serif;
+  --font-body: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --font-data: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #0f1517; --panel: #151e21; --grid: #1b2a2b; --grid-strong: #29403f;
+    --ink: #e2ebe5; --muted: #8ea29a; --line: #2a3b3c; --pen: #78acff;
+    --alarm: #ff6159; --ok: #4fcf88; --warn: #e6a347; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #0f1517; --panel: #151e21; --grid: #1b2a2b; --grid-strong: #29403f;
+  --ink: #e2ebe5; --muted: #8ea29a; --line: #2a3b3c; --pen: #78acff;
+  --alarm: #ff6159; --ok: #4fcf88; --warn: #e6a347; color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; }
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font: 15px/1.5 var(--font-body);
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.wrap {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding-block: 28px 48px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid;
+  gap: 18px;
+}
+
+header { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 8px 24px; }
+h1 {
+  margin: 0;
+  font: 800 clamp(40px, 7vw, 64px)/0.9 var(--font-display);
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  text-wrap: balance;
+}
+h1 span { color: var(--alarm); }
+.serial { font: 400 12px/1.4 var(--font-data); color: var(--muted); text-align: right; letter-spacing: 0.04em; }
+
+.label {
+  font: 600 11px/1 var(--font-data);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* Strip chart = the tap pad */
+.chart {
+  position: relative;
+  border: 1px solid var(--grid-strong);
+  background: var(--panel);
+  height: clamp(240px, 40vw, 340px);
+  cursor: pointer;
+  touch-action: manipulation;
+  overflow: hidden;
+}
+.chart canvas { display: block; width: 100%; height: 100%; }
+.chart .hint {
+  position: absolute; inset: auto 0 14px 0;
+  text-align: center;
+  font: 600 13px/1.3 var(--font-data);
+  color: var(--muted);
+  pointer-events: none;
+  padding-inline: 16px;
+}
+
+.gauges {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border: 1px solid var(--line);
+  background: var(--panel);
+}
+.gauge { padding: 12px 14px; display: grid; gap: 6px; border-left: 1px solid var(--line); min-width: 0; }
+.gauge:first-child { border-left: 0; }
+.gauge .val { font: 600 26px/1 var(--font-data); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.gauge .val small { font-size: 13px; color: var(--muted); font-weight: 400; margin-left: 4px; }
+.status-val { font: 600 15px/1.25 var(--font-body) !important; white-space: normal !important; display: flex; align-items: center; gap: 8px; }
+.lamp { width: 10px; height: 10px; border-radius: 50%; background: var(--muted); flex: none; }
+.lamp.ready { background: var(--ok); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ok) 25%, transparent); }
+.lamp.listening { background: var(--alarm); animation: blink 0.8s steps(2) infinite; }
+.lamp.cal { background: var(--warn); }
+@keyframes blink { 50% { opacity: 0.25; } }
+
+.controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+button {
+  font: 600 14px/1 var(--font-body);
+  padding: 12px 16px;
+  border: 1px solid var(--ink);
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+}
+button.primary { background: var(--ink); color: var(--paper); }
+button:hover { border-color: var(--pen); }
+button:focus-visible { outline: 2px solid var(--pen); outline-offset: 2px; }
+kbd {
+  font: 600 12px/1 var(--font-data);
+  border: 1px solid currentColor;
+  padding: 2px 6px;
+  margin-left: 6px;
+  opacity: 0.8;
+}
+.flash { font: 500 13px/1.3 var(--font-data); color: var(--warn); min-height: 1.3em; }
+
+.lower { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 18px; align-items: start; }
+
+.verdict {
+  border: 1px solid var(--line);
+  background: var(--panel);
+  padding: 18px;
+  display: grid;
+  gap: 14px;
+  min-height: 300px;
+  align-content: start;
+}
+.stamp-row { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+.stamp {
+  font: 800 clamp(52px, 9vw, 76px)/0.9 var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 8px 16px 4px;
+  border: 4px solid currentColor;
+  transform: rotate(-4deg);
+  color: var(--muted);
+}
+.stamp.idle { font-size: 30px; border-width: 2px; border-style: dashed; transform: none; }
+.stamp.truth { color: var(--ok); }
+.stamp.lie { color: var(--alarm); }
+.stamp.measuring { color: var(--warn); font-size: 34px; border-width: 2px; transform: none; }
+.stamp.pop { animation: pop 0.35s cubic-bezier(.2,1.6,.4,1); }
+@keyframes pop { from { transform: rotate(-4deg) scale(1.5); opacity: 0; } }
+.meta { display: grid; gap: 4px; }
+.meta .big { font: 600 22px/1.1 var(--font-data); font-variant-numeric: tabular-nums; }
+.meter { height: 10px; background: var(--grid); position: relative; }
+.meter i { position: absolute; inset: 0 auto 0 0; background: var(--ok); width: 0; transition: width 0.4s; }
+.meter::after { content: ""; position: absolute; left: 50%; top: -4px; bottom: -4px; width: 2px; background: var(--ink); }
+.meter-scale { display: flex; justify-content: space-between; font: 400 11px/1 var(--font-data); color: var(--muted); }
+.reasons { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+.reasons li { display: grid; grid-template-columns: 18px 1fr; gap: 8px; font-size: 14px; }
+.reasons li::before { content: "·"; font: 600 14px/1.5 var(--font-data); color: var(--muted); }
+.reasons li.hit::before { content: "▲"; color: var(--alarm); font-size: 11px; }
+.reasons li.ok::before { content: "✓"; color: var(--ok); }
+.progress { height: 6px; background: var(--grid); }
+.progress i { display: block; height: 100%; width: 0; background: var(--warn); }
+
+.side { display: grid; gap: 18px; min-width: 0; }
+.procedure { margin: 0; padding: 0; list-style: none; display: grid; gap: 10px; counter-reset: step; }
+.procedure li { display: grid; grid-template-columns: 28px 1fr; gap: 10px; font-size: 14px; counter-increment: step; }
+.procedure li::before {
+  content: counter(step);
+  font: 600 13px/26px var(--font-data);
+  width: 26px; height: 26px; text-align: center;
+  border: 1px solid var(--ink);
+}
+.procedure b { font-weight: 600; }
+
+.log-wrap { overflow-x: auto; border: 1px solid var(--line); background: var(--panel); }
+table { width: 100%; border-collapse: collapse; font: 400 13px/1.3 var(--font-data); font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th { font: 600 11px/1 var(--font-data); letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+tr:last-child td { border-bottom: 0; }
+td.v-truth { color: var(--ok); font-weight: 600; }
+td.v-lie { color: var(--alarm); font-weight: 600; }
+tr.example td { color: var(--muted); font-style: italic; }
+tr.example td.v-truth, tr.example td.v-lie { opacity: 0.7; }
+
+.fine { font-size: 12px; color: var(--muted); max-width: 70ch; }
+
+@media (max-width: 760px) {
+  .lower { grid-template-columns: minmax(0, 1fr); }
+  .gauges { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .gauge:nth-child(3) { border-left: 0; }
+  .gauge:nth-child(n+3) { border-top: 1px solid var(--line); }
+  .serial { text-align: left; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .stamp.pop, .lamp.listening { animation: none; }
+  .meter i { transition: none; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Rhythm<br><span>Polygraph</span></h1>
+    <div class="serial">MODEL RP-2 · MOTOR-RHYTHM ANALYSER<br>CHART SPEED 10 S / SCREEN</div>
+  </header>
+
+  <section class="chart" id="pad" aria-label="Tap pad: click the left mouse button here at a steady tempo">
+    <canvas id="chart"></canvas>
+    <div class="hint" id="hint">Click here with the left mouse button at a steady tempo</div>
+  </section>
+
+  <section class="gauges" aria-label="Live readings">
+    <div class="gauge"><span class="label">Tempo</span><span class="val" id="g-bpm">—<small>BPM</small></span></div>
+    <div class="gauge"><span class="label">Beat</span><span class="val" id="g-ms">—<small>ms</small></span></div>
+    <div class="gauge"><span class="label">Steadiness</span><span class="val" id="g-steady">—<small>%</small></span></div>
+    <div class="gauge"><span class="label">Status</span><span class="val status-val"><i class="lamp" id="lamp"></i><span id="g-status">Waiting for clicks</span></span></div>
+  </section>
+
+  <div class="controls">
+    <button class="primary" id="btn-q" type="button">Question asked<kbd>Space</kbd></button>
+    <button id="btn-reset" type="button">Reset session</button>
+    <span class="flash" id="flash" role="status" aria-live="polite"></span>
+  </div>
+
+  <div class="lower">
+    <section class="verdict" aria-live="polite">
+      <span class="label" id="v-title">Verdict</span>
+      <div class="stamp-row">
+        <div class="stamp idle" id="stamp">Awaiting question</div>
+        <div class="meta" id="v-meta" hidden>
+          <span class="label">Stress index</span>
+          <span class="big" id="v-score">0 / 100</span>
+          <span class="label" id="v-conf">Confidence 0%</span>
+        </div>
+      </div>
+      <div class="progress" id="v-progress" hidden><i id="v-progress-bar"></i></div>
+      <div id="v-meter" hidden>
+        <div class="meter"><i id="v-meter-bar"></i></div>
+        <div class="meter-scale"><span>calm</span><span>threshold 50</span><span>stressed</span></div>
+      </div>
+      <ul class="reasons" id="reasons">
+        <li>The analyser compares the beats you click right after the question with your own steady rhythm before it.</li>
+        <li>Slowing down, speeding up, uneven beats and hesitations all raise the stress index.</li>
+      </ul>
+    </section>
+
+    <div class="side">
+      <section>
+        <p class="label" style="margin:0 0 10px">Procedure</p>
+        <ol class="procedure">
+          <li><span>Subject clicks the <b>left mouse button</b> on the chart, in one steady tempo. Six even beats calibrate the machine.</span></li>
+          <li><span>Ask the question out loud, then press <b>Space</b> the moment it has been asked.</span></li>
+          <li><span>Subject answers <b>without breaking the rhythm</b>. The next 10 beats are measured.</span></li>
+          <li><span>Read the verdict. Keep clicking: the machine recalibrates for the next question.</span></li>
+        </ol>
+      </section>
+      <section>
+        <p class="label" style="margin:0 0 10px">Session log</p>
+        <div class="log-wrap">
+          <table>
+            <thead><tr><th>Q</th><th>Verdict</th><th>Stress</th><th>Tempo Δ</th><th>Time</th></tr></thead>
+            <tbody id="log">
+              <tr class="example"><td>ex.</td><td class="v-truth">TRUTH</td><td>18</td><td>+2.1%</td><td>example</td></tr>
+              <tr class="example"><td>ex.</td><td class="v-lie">LIE</td><td>74</td><td>+19.4%</td><td>example</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+      <p class="fine">Everything runs in your browser. No clicks or answers leave this page. Built for parties and fun: rhythm changes show nervousness or distraction, which is not the same thing as lying.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  'use strict';
+
+  const CFG = {
+    calBeats: 6,        // intervals needed before a question can be asked
+    baseWindow: 12,     // intervals used for the baseline
+    postBeats: 10,      // intervals measured after the question
+    postMaxMs: 7000,    // stop measuring after this long
+    lostMs: 2500,       // a gap this long (outside a question) restarts calibration
+    maxCv: 0.3,         // baseline must be at least this steady
+    threshold: 50,      // stress index at or above this = LIE
+    chartMs: 10000,
+  };
+
+  const $ = (id) => document.getElementById(id);
+  const canvas = $('chart'), ctx = canvas.getContext('2d');
+  const pad = $('pad');
+
+  let clicks = [];          // ms timestamps
+  let intervals = [];       // {t, iv, dev}
+  let segStart = 0;         // baseline only uses intervals after this time
+  let questions = [];       // {n, t, base, end, result}
+  let active = null;
+  let qCount = 0;
+  let flashTimer = 0;
+
+  const now = () => performance.now();
+  const mean = (a) => a.reduce((s, x) => s + x, 0) / a.length;
+  const sd = (a) => { const m = mean(a); return Math.sqrt(mean(a.map((x) => (x - m) ** 2))); };
+  const median = (a) => { const s = [...a].sort((x, y) => x - y); const k = s.length >> 1; return s.length % 2 ? s[k] : (s[k - 1] + s[k]) / 2; };
+  const clamp = (x, lo = 0, hi = 1) => Math.min(hi, Math.max(lo, x));
+  const pulse = (d) => Math.exp(-(((d - 10) / 28) ** 2)) - 0.32 * Math.exp(-(((d - 95) / 45) ** 2));
+
+  function flash(msg) {
+    $('flash').textContent = msg;
+    clearTimeout(flashTimer);
+    flashTimer = setTimeout(() => ($('flash').textContent = ''), 3500);
+  }
+
+  // ---------- input ----------
+  function beat() {
+    const t = now();
+    const last = clicks[clicks.length - 1];
+    if (last === undefined || (!active && t - last > CFG.lostMs)) {
+      segStart = t;
+    } else {
+      const iv = t - last;
+      let ref = null;
+      if (active) {
+        ref = active.base.mean;
+      } else {
+        const from = Math.max(segStart, lastQuestionEnd());
+        const prev = intervals.filter((x) => x.t > from).slice(-8).map((x) => x.iv);
+        if (prev.length >= 3) ref = median(prev);
+      }
+      intervals.push({ t, iv, dev: ref ? (iv - ref) / ref : null });
+    }
+    clicks.push(t);
+    const cutoff = t - 60000;
+    while (clicks.length > 40 && clicks[0] < cutoff) clicks.shift();
+    while (intervals.length > 40 && intervals[0].t < cutoff) intervals.shift();
+    $('hint').hidden = true;
+  }
+
+  document.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0) return;
+    if (e.target.closest('button, a, input, textarea, select, .log-wrap')) return;
+    beat();
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.code !== 'Space') return;
+    e.preventDefault();
+    if (e.repeat) return;
+    askQuestion();
+  });
+
+  $('btn-q').addEventListener('click', (e) => { e.currentTarget.blur(); askQuestion(); });
+  $('btn-reset').addEventListener('click', (e) => { e.currentTarget.blur(); reset(); });
+
+  // ---------- analysis ----------
+  function lastQuestionEnd() {
+    const q = questions[questions.length - 1];
+    return q ? (q.end ?? Infinity) : -Infinity;
+  }
+
+  function baseline(at) {
+    const from = Math.max(segStart, lastQuestionEnd());
+    let ivs = intervals.filter((x) => x.t > from && x.t <= at).slice(-CFG.baseWindow).map((x) => x.iv);
+    if (ivs.length < CFG.calBeats) return { n: ivs.length };
+    const med = median(ivs);
+    ivs = ivs.filter((x) => x > med * 0.5 && x < med * 2);
+    if (ivs.length < CFG.calBeats) return { n: ivs.length };
+    const m = mean(ivs), s = sd(ivs);
+    return { n: ivs.length, mean: m, sd: s, cv: s / m };
+  }
+
+  function machineState(t) {
+    if (active) return 'listening';
+    const last = clicks[clicks.length - 1];
+    if (last === undefined) return 'idle';
+    if (t - last > CFG.lostMs) return 'lost';
+    const b = baseline(t);
+    if (b.mean === undefined) return 'calibrating';
+    if (b.cv > CFG.maxCv) return 'unsteady';
+    return 'ready';
+  }
+
+  function askQuestion() {
+    const t = now();
+    const st = machineState(t);
+    if (st === 'listening') return flash('Still measuring the last answer. Keep clicking.');
+    if (st === 'idle' || st === 'lost') return flash('Start clicking a steady rhythm first.');
+    if (st === 'calibrating') return flash(`Calibrating: ${CFG.calBeats - baseline(t).n} more even beats needed.`);
+    if (st === 'unsteady') return flash('Rhythm too uneven to calibrate. Steady the beat, then ask.');
+    active = { n: ++qCount, t, base: baseline(t), end: null, result: null };
+    questions.push(active);
+    showMeasuring(0);
+  }
+
+  function postIntervals(q) {
+    return intervals.filter((x) => x.t > q.t).map((x) => x.iv);
+  }
+
+  function checkActive(t) {
+    if (!active) return;
+    const post = postIntervals(active);
+    const last = clicks[clicks.length - 1];
+    const freezeMs = Math.max(2000, active.base.mean * 4);
+    const frozen = t - last > freezeMs;
+    if (post.length >= CFG.postBeats || frozen || t - active.t > CFG.postMaxMs) {
+      finish(active, post, frozen ? t - last : 0, t);
+    } else {
+      showMeasuring(post.length / CFG.postBeats);
+    }
+  }
+
+  function analyse(base, post, freezeGap) {
+    const m = base.mean;
+    const s = Math.max(base.sd, m * 0.05);
+    const cvBase = Math.max(base.cv, 0.05);
+    const all = freezeGap ? [...post, freezeGap] : post;
+    const res = { reasons: [], freeze: !!freezeGap || post.length < 3 };
+
+    if (all.length) {
+      const z = all.map((iv) => Math.abs(iv - m) / s);
+      const meanZ = mean(z), maxZ = Math.max(...z);
+      const postMean = mean(post.length ? post : all);
+      const shift = (postMean - m) / m;
+      const cvPost = post.length >= 3 ? sd(post) / mean(post) : cvBase;
+      const worst = all.reduce((a, b) => (Math.abs(b - m) > Math.abs(a - m) ? b : a), all[0]);
+
+      const jitterPts = clamp((meanZ - 1.2) / 3) * 40;
+      const spikePts = clamp((maxZ - 2.5) / 5) * 30;
+      const tempoPts = clamp((Math.abs(shift) - 0.05) / 0.25) * 30;
+      res.score = jitterPts + spikePts + tempoPts;
+      res.shift = shift;
+
+      res.reasons.push({
+        hit: tempoPts > 6,
+        text: `Tempo ${shift >= 0 ? 'slowed' : 'sped up'} by ${Math.abs(shift * 100).toFixed(1)}% (${Math.round(60000 / m)} → ${Math.round(60000 / postMean)} BPM)`,
+      });
+      res.reasons.push({
+        hit: jitterPts > 6,
+        text: `Beat-to-beat variation ${(cvPost / cvBase).toFixed(1)}× your calibrated rhythm`,
+      });
+      const ratio = worst / m;
+      res.reasons.push({
+        hit: spikePts > 6,
+        text: ratio >= 1
+          ? `Longest hesitation ${ratio.toFixed(2)}× a normal beat (${Math.round(worst)} ms vs ${Math.round(m)} ms)`
+          : `Fastest beat came ${((1 - ratio) * 100).toFixed(0)}% early (${Math.round(worst)} ms vs ${Math.round(m)} ms)`,
+      });
+    } else {
+      res.score = 0;
+      res.shift = 0;
+    }
+
+    if (res.freeze) {
+      res.score = Math.max(res.score, 88);
+      res.reasons.unshift({ hit: true, text: 'Rhythm broke down: the clicking stalled after the question' });
+    }
+    res.score = Math.round(clamp(res.score, 0, 100));
+    res.lie = res.score >= CFG.threshold;
+    res.confidence = Math.round(Math.min(97, 55 + Math.abs(res.score - CFG.threshold) * 0.84));
+    return res;
+  }
+
+  function finish(q, post, freezeGap, t) {
+    q.end = t;
+    q.result = analyse(q.base, post, freezeGap);
+    active = null;
+    showResult(q);
+    addLog(q);
+    if (freezeGap) segStart = t; // force a fresh calibration after a freeze
+  }
+
+  // ---------- verdict UI ----------
+  function setStamp(cls, text) {
+    const el = $('stamp');
+    el.className = 'stamp ' + cls;
+    el.textContent = text;
+  }
+
+  function showMeasuring(p) {
+    $('v-title').textContent = `Question ${active.n} · measuring response`;
+    setStamp('measuring', 'Measuring…');
+    $('v-meta').hidden = true;
+    $('v-meter').hidden = true;
+    $('v-progress').hidden = false;
+    $('v-progress-bar').style.width = `${Math.round(p * 100)}%`;
+    const reasons = $('reasons');
+    if (!reasons.dataset.measuring) {
+      reasons.innerHTML = '<li>Keep the same tempo while the subject answers.</li>';
+      reasons.dataset.measuring = '1';
+    }
+  }
+
+  function showResult(q) {
+    const r = q.result;
+    $('v-title').textContent = `Question ${q.n} · verdict`;
+    setStamp(r.lie ? 'lie pop' : 'truth pop', r.lie ? 'Lie' : 'Truth');
+    $('v-progress').hidden = true;
+    $('v-meta').hidden = false;
+    $('v-meter').hidden = false;
+    $('v-score').textContent = `${r.score} / 100`;
+    $('v-conf').textContent = `Confidence ${r.confidence}%`;
+    const bar = $('v-meter-bar');
+    bar.style.width = `${Math.max(2, r.score)}%`;
+    bar.style.background = r.lie ? 'var(--alarm)' : 'var(--ok)';
+    const ul = $('reasons');
+    delete ul.dataset.measuring;
+    ul.innerHTML = '';
+    for (const x of r.reasons) {
+      const li = document.createElement('li');
+      li.className = x.hit ? 'hit' : 'ok';
+      li.textContent = x.text;
+      ul.appendChild(li);
+    }
+  }
+
+  function addLog(q) {
+    const tb = $('log');
+    tb.querySelectorAll('tr.example').forEach((tr) => tr.remove());
+    const r = q.result;
+    const tr = document.createElement('tr');
+    const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const shift = r.freeze ? 'stopped' : `${r.shift >= 0 ? '+' : '−'}${Math.abs(r.shift * 100).toFixed(1)}%`;
+    [String(q.n), r.lie ? 'LIE' : 'TRUTH', String(r.score), shift, time].forEach((txt, i) => {
+      const td = document.createElement('td');
+      td.textContent = txt;
+      if (i === 1) td.className = r.lie ? 'v-lie' : 'v-truth';
+      tr.appendChild(td);
+    });
+    tb.prepend(tr);
+  }
+
+  function reset() {
+    clicks = []; intervals = []; questions = []; active = null; qCount = 0; segStart = 0;
+    $('v-title').textContent = 'Verdict';
+    setStamp('idle', 'Awaiting question');
+    $('v-meta').hidden = true; $('v-meter').hidden = true; $('v-progress').hidden = true;
+    $('reasons').innerHTML = '<li>Session cleared. Start clicking a steady rhythm to calibrate.</li>';
+    $('log').innerHTML = '';
+    $('hint').hidden = false;
+    flash('Session reset.');
+  }
+
+  // ---------- gauges ----------
+  const STATUS = {
+    idle: ['', 'Waiting for clicks'],
+    lost: ['', 'Rhythm lost. Click again'],
+    calibrating: ['cal', 'Calibrating'],
+    unsteady: ['cal', 'Too uneven. Steady up'],
+    ready: ['ready', 'Ready. Ask a question'],
+    listening: ['listening', 'Measuring answer'],
+  };
+  let lastGauge = 0;
+  function updateGauges(t) {
+    if (t - lastGauge < 100) return;
+    lastGauge = t;
+    const st = machineState(t);
+    const [lampCls, text] = STATUS[st];
+    $('lamp').className = 'lamp ' + lampCls;
+    $('g-status').textContent = st === 'calibrating' ? `Calibrating ${baseline(t).n}/${CFG.calBeats}` : text;
+    const live = st === 'idle' || st === 'lost' ? [] : intervals.filter((x) => x.t >= segStart).slice(-6).map((x) => x.iv);
+    if (live.length >= 2) {
+      const m = mean(live);
+      $('g-bpm').innerHTML = `${Math.round(60000 / m)}<small>BPM</small>`;
+      $('g-ms').innerHTML = `${Math.round(m)}<small>ms</small>`;
+      $('g-steady').innerHTML = `${Math.round(clamp(1 - (sd(live) / m) * 2) * 100)}<small>%</small>`;
+    } else {
+      $('g-bpm').innerHTML = '—<small>BPM</small>';
+      $('g-ms').innerHTML = '—<small>ms</small>';
+      $('g-steady').innerHTML = '—<small>%</small>';
+    }
+  }
+
+  // ---------- strip chart ----------
+  let colors = {};
+  let lastColorRead = -1e9;
+  function readColors(t) {
+    if (t - lastColorRead < 1000) return;
+    lastColorRead = t;
+    const cs = getComputedStyle(document.documentElement);
+    for (const k of ['panel', 'grid', 'grid-strong', 'ink', 'muted', 'pen', 'alarm', 'ok', 'warn']) {
+      colors[k] = cs.getPropertyValue('--' + k).trim();
+    }
+  }
+
+  let W = 0, H = 0, dpr = 1;
+  function resize() {
+    const r = canvas.getBoundingClientRect();
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    W = r.width; H = r.height;
+    canvas.width = Math.round(W * dpr);
+    canvas.height = Math.round(H * dpr);
+  }
+  new ResizeObserver(resize).observe(pad);
+  resize();
+
+  function draw(t) {
+    readColors(t);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.fillStyle = colors.panel;
+    ctx.fillRect(0, 0, W, H);
+
+    const penX = W - 24;
+    const x = (tt) => penX - ((t - tt) / CFG.chartMs) * penX;
+    const tAt = (px) => t - ((penX - px) / penX) * CFG.chartMs;
+
+    // paper grid, scrolling with time
+    ctx.lineWidth = 1;
+    for (let s = Math.floor(tAt(0) / 200) * 200; s <= t; s += 200) {
+      const gx = Math.round(x(s)) + 0.5;
+      ctx.strokeStyle = s % 1000 === 0 ? colors['grid-strong'] : colors.grid;
+      ctx.beginPath(); ctx.moveTo(gx, 0); ctx.lineTo(gx, H); ctx.stroke();
+    }
+    for (let gy = 0, i = 0; gy <= H; gy += H / 20, i++) {
+      ctx.strokeStyle = i % 5 === 0 ? colors['grid-strong'] : colors.grid;
+      const yy = Math.round(gy) + 0.5;
+      ctx.beginPath(); ctx.moveTo(0, yy); ctx.lineTo(W, yy); ctx.stroke();
+    }
+
+    const splitY = H * 0.55;
+    const pulseMid = splitY * 0.62, pulseAmp = splitY * 0.42;
+    const tempoMid = splitY + (H - splitY) * 0.5, tempoAmp = (H - splitY) * 0.38;
+
+    // question windows
+    for (const q of questions) {
+      const x0 = x(q.t);
+      const x1 = x(q.end ?? t);
+      if (x1 < 0) continue;
+      const tone = q.result ? (q.result.lie ? colors.alarm : colors.ok) : colors.warn;
+      ctx.globalAlpha = 0.1;
+      ctx.fillStyle = tone;
+      ctx.fillRect(x0, 0, x1 - x0, H);
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle = tone;
+      ctx.setLineDash([5, 4]);
+      ctx.beginPath(); ctx.moveTo(Math.round(x0) + 0.5, 0); ctx.lineTo(Math.round(x0) + 0.5, H); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = tone;
+      ctx.font = '600 11px "JetBrains Mono", monospace';
+      const tag = q.result ? `Q${q.n} ${q.result.lie ? 'LIE' : 'TRUTH'}` : `Q${q.n}`;
+      ctx.fillText(tag, x0 + 5, 30);
+    }
+
+    // channel labels
+    ctx.fillStyle = colors.muted;
+    ctx.font = '600 10px "JetBrains Mono", monospace';
+    ctx.fillText('CH1  PULSE · LEFT BUTTON', 10, 15);
+    ctx.fillText('CH2  TEMPO Δ vs RHYTHM', 10, splitY + 15);
+    ctx.textAlign = 'right';
+    ctx.fillText('SLOWER +30%', penX - 6, tempoMid - tempoAmp - 5);
+    ctx.fillText('FASTER −30%', penX - 6, tempoMid + tempoAmp + 13);
+    ctx.textAlign = 'left';
+    ctx.strokeStyle = colors.muted;
+    ctx.beginPath(); ctx.moveTo(0, Math.round(splitY) + 0.5); ctx.lineTo(W, Math.round(splitY) + 0.5); ctx.stroke();
+
+    // tempo baseline
+    ctx.strokeStyle = colors['grid-strong'];
+    ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(0, tempoMid); ctx.lineTo(penX, tempoMid); ctx.stroke();
+
+    // CH1 pulse trace
+    const visible = clicks.filter((c) => c > tAt(0) - 300);
+    ctx.strokeStyle = colors.pen;
+    ctx.lineWidth = 1.8;
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    for (let px = 0; px <= penX; px += 1.5) {
+      const tt = tAt(px);
+      let v = Math.sin(tt / 97) * 0.015 + Math.sin(tt / 23) * 0.008;
+      for (const c of visible) {
+        const d = tt - c;
+        if (d < -120 || d > 260) continue;
+        v += pulse(d);
+      }
+      const yy = pulseMid - v * pulseAmp;
+      px === 0 ? ctx.moveTo(px, yy) : ctx.lineTo(px, yy);
+    }
+    ctx.stroke();
+
+    // CH2 tempo deviation steps
+    const devs = intervals.filter((iv) => iv.dev !== null && iv.t > tAt(0) - 2000);
+    const yDev = (d) => tempoMid - clamp(d, -0.3, 0.3) / 0.3 * tempoAmp;
+    if (devs.length) {
+      ctx.strokeStyle = colors.ink;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      devs.forEach((d, i) => {
+        const xx = x(d.t), yy = yDev(d.dev);
+        if (i === 0) ctx.moveTo(xx, yy);
+        else ctx.lineTo(xx, yy);
+        const next = devs[i + 1];
+        ctx.lineTo(next ? x(next.t) : penX, yy);
+      });
+      ctx.stroke();
+      for (const d of devs) {
+        const hot = Math.abs(d.dev) > 0.15;
+        ctx.fillStyle = hot ? colors.alarm : colors.ink;
+        ctx.beginPath(); ctx.arc(x(d.t), yDev(d.dev), hot ? 3.5 : 2.5, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+
+    // pen carriage
+    ctx.strokeStyle = colors.muted;
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(penX + 0.5, 0); ctx.lineTo(penX + 0.5, H); ctx.stroke();
+    let headV = 0;
+    for (const c of visible) {
+      const d = t - c;
+      if (d >= -120 && d <= 260) headV += pulse(d);
+    }
+    ctx.fillStyle = colors.pen;
+    ctx.beginPath(); ctx.arc(penX, pulseMid - headV * pulseAmp, 4, 0, Math.PI * 2); ctx.fill();
+  }
+
+  function frame() {
+    const t = now();
+    checkActive(t);
+    updateGauges(t);
+    draw(t);
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
