@@ -10,6 +10,12 @@
   const CODE_LEN = 4;
   const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
   const STEADY_LIMIT = 70;
+  const HOLD_MS = 300;
+  const SIDE_SHARE = 0.6;
+  const SIDE_MIN = 4;
+  // The fraction of a beat's t says which part of the button was pressed.
+  const SIDE_FRAC = { c: 0, l: 0.25, r: 0.5 };
+  const sideOf = (t) => { const f = t - Math.floor(t); return f > 0.4 ? 'r' : f > 0.1 ? 'l' : 'c'; };
 
   const $ = (id) => document.getElementById(id);
   const params = new URLSearchParams(location.search);
@@ -74,32 +80,76 @@
     let roomRef = null;
     let playerId = null;
     let offset = null;   // subject's clock minus ours, from the least-delayed beat
-    let lean = null;     // 'truth' | 'lie' | null
     let verdictN = 0;
+    let sides = [];      // {t, s} for the current player's presses
+    let control = load('rp-c') === '1';
+    let spaceDownAt = null;
+    let spaceQ = null;   // question marked by the Space press that is still held
+    let btnDownAt = null;
+    let btnHold = null;  // {ms, at} of the last Question asked button press
+
+    function sideLean(q) {
+      const inWindow = sides.filter((b) => b.t > q.t && b.t <= q.end);
+      if (inWindow.length < SIDE_MIN) return null;
+      const share = (s) => inWindow.filter((b) => b.s === s).length / inWindow.length;
+      if (share('l') >= SIDE_SHARE) return 'lie';
+      if (share('r') >= SIDE_SHARE) return 'truth';
+      return null;
+    }
+
+    function setVerdict(r, lie) {
+      if (r.lie === lie) return;
+      const th = RhythmPolygraph.CFG.threshold;
+      const jitter = (n) => Math.floor(Math.random() * n);
+      r.lie = lie;
+      r.score = lie ? Math.min(100, Math.max(r.score, th + 4 + jitter(18))) : Math.min(r.score, Math.max(0, th - 6 - jitter(14)));
+      r.confidence = RhythmPolygraph.confidenceFor(r.score);
+    }
 
     const poly = RhythmPolygraph({
       clock: () => performance.now() + (offset ?? 0),
       silentReset: true,
-      penTint: () => (lean === 'truth' ? 'ok' : lean === 'lie' ? 'alarm' : null),
+      tempoLabels: () => (control ? ['SLOW', 'FAST'] : ['SLOWER', 'FASTER']),
+      onQuestion(q) {
+        q.c = control;
+        if (!control) return;
+        if (spaceDownAt !== null) spaceQ = q;
+        else if (btnHold && performance.now() - btnHold.at < 600) q.lean = btnHold.ms > HOLD_MS ? 'lie' : 'truth';
+        else q.lean = 'truth';
+      },
       decide(q) {
-        if (!lean) return;
         const r = q.result;
-        if (!r.freeze && r.score < STEADY_LIMIT) r.lie = lean === 'lie';
-        lean = null;
+        let lean;
+        if (q.c) {
+          lean = spaceQ === q ? 'lie' : q.lean;
+          if (r.freeze || r.score >= STEADY_LIMIT) lean = null;
+        } else {
+          lean = sideLean(q);
+        }
+        if (lean) setVerdict(r, lean === 'lie');
       },
       onVerdict(q) {
         if (roomRef && playerId) roomRef.child('verdict').set({ n: ++verdictN, lie: q.result.lie, p: playerId });
       },
     });
 
-    const toggle = (v) => { lean = lean === v ? null : v; };
-    document.addEventListener('keydown', (e) => {
+    // Capture phase, so the press is timed before the analyser marks the question.
+    window.addEventListener('keydown', (e) => {
       if (e.repeat || e.ctrlKey || e.metaKey || e.altKey || e.target.closest('input, textarea')) return;
-      if (e.code === 'KeyT') toggle('truth');
-      else if (e.code === 'KeyL') toggle('lie');
-    });
-    $('h-a').addEventListener('pointerdown', () => toggle('truth'));
-    $('h-b').addEventListener('pointerdown', () => toggle('lie'));
+      if (e.code === 'Space') spaceDownAt = performance.now();
+      else if (e.code === 'KeyC') { control = !control; save('rp-c', control ? '1' : '0'); }
+    }, true);
+    window.addEventListener('keyup', (e) => {
+      if (e.code !== 'Space' || spaceDownAt === null) return;
+      const ms = performance.now() - spaceDownAt;
+      spaceDownAt = null;
+      if (spaceQ) { spaceQ.lean = ms > HOLD_MS ? 'lie' : 'truth'; spaceQ = null; }
+    }, true);
+    $('btn-q').addEventListener('pointerdown', () => { btnDownAt = performance.now(); }, true);
+    $('btn-q').addEventListener('pointerup', () => {
+      if (btnDownAt !== null) btnHold = { ms: performance.now() - btnDownAt, at: performance.now() };
+      btnDownAt = null;
+    }, true);
 
     $('btn-copy').addEventListener('click', async (e) => {
       e.currentTarget.blur();
@@ -155,7 +205,7 @@
       if (id === playerId) return;
       playerId = id;
       offset = null;
-      lean = null;
+      sides = [];
       roomRef.child('beats').remove();
       roomRef.child('verdict').remove();
       if (playerId) {
@@ -174,6 +224,8 @@
       if (!b || b.p !== playerId || !Number.isFinite(b.t)) return;
       const o = b.t - performance.now();
       if (offset === null || o > offset) offset = o;
+      sides.push({ t: b.t, s: sideOf(b.t) });
+      if (sides.length > 80) sides.shift();
       poly.beat(b.t);
     });
 
@@ -262,7 +314,10 @@
       if (e.button !== 0 || press.disabled) return;
       e.preventDefault();
       press.classList.add('down');
-      roomRef.child('beats').push({ p: myId, t: performance.now() });
+      const rect = press.getBoundingClientRect();
+      const x = (e.clientX - rect.left) / rect.width;
+      const side = x < 0.4 ? 'l' : x > 0.6 ? 'r' : 'c';
+      roomRef.child('beats').push({ p: myId, t: Math.floor(performance.now()) + SIDE_FRAC[side] });
     });
     for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) {
       press.addEventListener(ev, () => press.classList.remove('down'));

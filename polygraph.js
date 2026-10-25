@@ -6,6 +6,7 @@
 //   opts.onVerdict(q)  called after a verdict is shown
 //   opts.onQuestion(q) called when a question is marked
 //   opts.penTint()     token name for the pen head colour (default 'pen')
+//   opts.tempoLabels() [slow, fast] words for the CH2 scale (default SLOWER / FASTER)
 window.RhythmPolygraph = function RhythmPolygraph(options) {
   'use strict';
   const opts = options || {};
@@ -21,6 +22,7 @@ window.RhythmPolygraph = function RhythmPolygraph(options) {
     chartMs: 10000,
   };
   RhythmPolygraph.CFG = CFG;
+  RhythmPolygraph.confidenceFor = (score) => Math.round(Math.min(97, 55 + Math.abs(score - CFG.threshold) * 0.84));
 
   const $ = (id) => document.getElementById(id);
   const canvas = $('chart'), ctx = canvas.getContext('2d');
@@ -194,7 +196,7 @@ window.RhythmPolygraph = function RhythmPolygraph(options) {
     }
     res.score = Math.round(clamp(res.score, 0, 100));
     res.lie = res.score >= CFG.threshold;
-    res.confidence = Math.round(Math.min(97, 55 + Math.abs(res.score - CFG.threshold) * 0.84));
+    res.confidence = RhythmPolygraph.confidenceFor(res.score);
     return res;
   }
 
@@ -389,8 +391,9 @@ window.RhythmPolygraph = function RhythmPolygraph(options) {
     ctx.fillText('CH1  PULSE · LEFT BUTTON', 10, 15);
     ctx.fillText('CH2  TEMPO Δ vs RHYTHM', 10, splitY + 15);
     ctx.textAlign = 'right';
-    ctx.fillText('SLOWER +30%', penX - 6, tempoMid - tempoAmp - 5);
-    ctx.fillText('FASTER −30%', penX - 6, tempoMid + tempoAmp + 13);
+    const [slowLabel, fastLabel] = opts.tempoLabels?.() || ['SLOWER', 'FASTER'];
+    ctx.fillText(`${slowLabel} +30%`, penX - 6, tempoMid - tempoAmp - 5);
+    ctx.fillText(`${fastLabel} −30%`, penX - 6, tempoMid + tempoAmp + 13);
     ctx.textAlign = 'left';
     ctx.strokeStyle = colors.muted;
     ctx.beginPath(); ctx.moveTo(0, Math.round(splitY) + 0.5); ctx.lineTo(W, Math.round(splitY) + 0.5); ctx.stroke();

@@ -59,7 +59,6 @@ h1 {
   text-wrap: balance;
 }
 h1 span { color: var(--alarm); }
-h1 .h-plain { color: inherit; }
 .serial { font: 400 12px/1.4 var(--font-data); color: var(--muted); text-align: right; letter-spacing: 0.04em; }
 
 .label {
