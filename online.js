@@ -40,11 +40,27 @@
 
   const joinCode = cleanCode(params.get('room'));
   if (joinCode.length === CODE_LEN) player(joinCode);
-  else if (params.has('host')) host();
+  else if (params.has('host')) hostGate();
   else lobby();
 
+  // The passcode for starting a room lives in index.html: <meta name="room-passcode">.
+  async function roomPasscode() {
+    const res = await fetch('index.html', { cache: 'no-store' });
+    if (!res.ok) throw new Error('index.html ' + res.status);
+    const doc = new DOMParser().parseFromString(await res.text(), 'text/html');
+    return doc.querySelector('meta[name="room-passcode"]')?.content || null;
+  }
+
+  async function hostGate() {
+    let ok = false;
+    try { ok = (await roomPasscode()) === load('rp-pass'); } catch {}
+    if (ok) return host();
+    history.replaceState(null, '', location.pathname);
+    lobby(true);
+  }
+
   // ---------- lobby ----------
-  function lobby() {
+  function lobby(askPass = false) {
     show('lobby');
     const input = $('join-code');
     const go = () => {
@@ -63,8 +79,31 @@
       if (c.length === CODE_LEN) go();
     });
     $('join-form').addEventListener('submit', (e) => { e.preventDefault(); go(); });
-    $('btn-create').addEventListener('click', () => { location.search = '?host'; });
-    input.focus();
+    const pass = $('create-pass');
+    const openPass = () => {
+      $('btn-create').hidden = true;
+      $('create-box').hidden = false;
+      pass.focus();
+    };
+    $('btn-create').addEventListener('click', openPass);
+    pass.addEventListener('input', () => { $('create-error').textContent = ''; });
+    $('create-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      let want;
+      try { want = await roomPasscode(); } catch {
+        $('create-error').textContent = 'Could not check the passcode. Check your connection and try again.';
+        return;
+      }
+      if (!want || pass.value !== want) {
+        $('create-error').textContent = 'Wrong passcode.';
+        pass.select();
+        return;
+      }
+      save('rp-pass', pass.value);
+      location.search = '?host';
+    });
+    if (askPass) openPass();
+    else input.focus();
   }
 
   // ---------- host ----------

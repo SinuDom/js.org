@@ -22,7 +22,15 @@
     <span class="flash" id="join-error" role="alert"></span>
   </form>
   <div class="divider"><span>or</span></div>
-  <button id="btn-create" type="button">Start a new room</button>
+  <form class="join" id="create-form" novalidate>
+    <button id="btn-create" type="button">Start a new room</button>
+    <div class="join" id="create-box" hidden>
+      <label class="label" for="create-pass">Passcode</label>
+      <input id="create-pass" class="pass-input" type="password" autocomplete="off" aria-describedby="create-error">
+      <button class="primary" type="submit">Create room</button>
+      <span class="flash" id="create-error" role="alert"></span>
+    </div>
+  </form>
   <a class="mode-link" href="index.html">Play on one device →</a>
 </main>
 

@@ -264,6 +264,13 @@ tr.example td.v-truth, tr.example td.v-lie { opacity: 0.7; }
 }
 .code-input::placeholder { color: var(--grid-strong); }
 .code-input:focus-visible { outline: 2px solid var(--pen); outline-offset: 2px; }
+.pass-input {
+  width: 100%; padding: 14px 12px; text-align: center;
+  font: 600 20px/1 var(--font-data); letter-spacing: 0.1em;
+  border: 2px solid var(--ink); background: var(--panel); color: var(--ink);
+  -webkit-user-select: text; user-select: text;
+}
+.pass-input:focus-visible { outline: 2px solid var(--pen); outline-offset: 2px; }
 .join button { width: 100%; padding-block: 16px; font-size: 16px; }
 .divider { display: flex; align-items: center; gap: 12px; width: min(100%, 320px); color: var(--muted); font: 600 11px/1 var(--font-data); text-transform: uppercase; letter-spacing: 0.12em; }
 .divider::before, .divider::after { content: ""; flex: 1; height: 1px; background: var(--line); }
