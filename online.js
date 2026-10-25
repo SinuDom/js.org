@@ -10,7 +10,7 @@
   const CODE_LEN = 4;
   const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
   const STEADY_LIMIT = 70;
-  const HOLD_MS = 300;
+  const HOLD_MS = 150;
   const SIDE_SHARE = 0.6;
   const SIDE_MIN = 4;
   // The fraction of a beat's t says which part of the button was pressed.
