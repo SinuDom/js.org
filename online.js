@@ -158,11 +158,13 @@
     qBtn.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); poly.askQuestion(); } });
     qBtn.addEventListener('contextmenu', (e) => e.preventDefault());
 
-    // Double-tap on the chart does what C does.
-    let lastChartTap = 0;
-    $('pad').addEventListener('pointerdown', (e) => {
+    // Triple-tap on the chart does what C does.
+    let chartTaps = [];
+    $('pad').addEventListener('pointerdown', () => {
       const t = performance.now();
-      if (t - lastChartTap < 350) { toggleControl(); lastChartTap = 0; } else lastChartTap = t;
+      chartTaps = chartTaps.filter((x) => t - x < 600);
+      chartTaps.push(t);
+      if (chartTaps.length >= 3) { toggleControl(); chartTaps = []; }
     });
 
     $('btn-copy').addEventListener('click', async (e) => {
