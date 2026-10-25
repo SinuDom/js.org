@@ -80,7 +80,7 @@
     let offset = null;   // subject's clock minus ours, from the least-delayed beat
     let verdictN = 0;
     let sides = [];      // {t, s} for the current player's presses
-    let control = load('rp-c') === '1';
+    let control = false; // starts off on every load
     let spaceDownAt = null;
     let spaceQ = null;   // question marked by the Space press that is still held
     let btnDownAt = null;
@@ -135,7 +135,7 @@
     window.addEventListener('keydown', (e) => {
       if (e.repeat || e.ctrlKey || e.metaKey || e.altKey || e.target.closest('input, textarea')) return;
       if (e.code === 'Space') spaceDownAt = performance.now();
-      else if (e.code === 'KeyC') { control = !control; save('rp-c', control ? '1' : '0'); }
+      else if (e.code === 'KeyC') control = !control;
     }, true);
     window.addEventListener('keyup', (e) => {
       if (e.code !== 'Space' || spaceDownAt === null) return;
