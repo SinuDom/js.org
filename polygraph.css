@@ -59,6 +59,7 @@ h1 {
   text-wrap: balance;
 }
 h1 span { color: var(--alarm); }
+h1 .h-plain { color: inherit; }
 .serial { font: 400 12px/1.4 var(--font-data); color: var(--muted); text-align: right; letter-spacing: 0.04em; }
 
 .label {
@@ -212,7 +213,8 @@ tr.example td.v-truth, tr.example td.v-lie { opacity: 0.7; }
   border: 1px solid var(--line); background: var(--panel); padding: 12px 14px;
 }
 .room-code { display: grid; gap: 6px; }
-.room-code b { font: 600 22px/1 var(--font-data); letter-spacing: 0.14em; }
+.room-code b { font: 600 34px/1 var(--font-data); letter-spacing: 0.18em; }
+.join-where { font: 400 12px/1.3 var(--font-data); color: var(--muted); overflow-wrap: anywhere; }
 .share { display: flex; gap: 8px; flex: 1 1 320px; min-width: 0; align-items: end; }
 .share label { display: grid; gap: 6px; flex: 1; min-width: 0; }
 .share input {
@@ -221,11 +223,6 @@ tr.example td.v-truth, tr.example td.v-lie { opacity: 0.7; }
   -webkit-user-select: text; user-select: text;
 }
 .conn { display: flex; align-items: center; gap: 8px; font-weight: 600; }
-.rig { font: 600 11px/1 var(--font-data); letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
-.rig b { font-weight: 600; }
-.rig b.truth { color: var(--ok); }
-.rig b.lie { color: var(--alarm); }
-.reasons li.rigged::before { content: "◆"; color: var(--pen); font-size: 11px; }
 
 /* Online mode: player screen */
 .player {
@@ -257,3 +254,17 @@ tr.example td.v-truth, tr.example td.v-lie { opacity: 0.7; }
 @media (prefers-reduced-motion: reduce) {
   .big-button { transition: none; }
 }
+
+/* Online mode: lobby */
+.join { display: grid; gap: 10px; justify-items: center; width: min(100%, 320px); }
+.code-input {
+  width: 100%; padding: 14px 10px; text-align: center;
+  font: 600 40px/1 var(--font-data); letter-spacing: 0.3em; text-indent: 0.3em; text-transform: uppercase;
+  border: 2px solid var(--ink); background: var(--panel); color: var(--ink);
+  -webkit-user-select: text; user-select: text;
+}
+.code-input::placeholder { color: var(--grid-strong); }
+.code-input:focus-visible { outline: 2px solid var(--pen); outline-offset: 2px; }
+.join button { width: 100%; padding-block: 16px; font-size: 16px; }
+.divider { display: flex; align-items: center; gap: 12px; width: min(100%, 320px); color: var(--muted); font: 600 11px/1 var(--font-data); text-transform: uppercase; letter-spacing: 0.12em; }
+.divider::before, .divider::after { content: ""; flex: 1; height: 1px; background: var(--line); }

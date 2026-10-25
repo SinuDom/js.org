@@ -5,6 +5,7 @@
 //   opts.decide(q)     may change q.result before the verdict is shown
 //   opts.onVerdict(q)  called after a verdict is shown
 //   opts.onQuestion(q) called when a question is marked
+//   opts.penTint()     token name for the pen head colour (default 'pen')
 window.RhythmPolygraph = function RhythmPolygraph(options) {
   'use strict';
   const opts = options || {};
@@ -449,7 +450,7 @@ window.RhythmPolygraph = function RhythmPolygraph(options) {
       const d = t - c;
       if (d >= -120 && d <= 260) headV += pulse(d);
     }
-    ctx.fillStyle = colors.pen;
+    ctx.fillStyle = colors[opts.penTint?.() || 'pen'];
     ctx.beginPath(); ctx.arc(penX, pulseMid - headV * pulseAmp, 4, 0, Math.PI * 2); ctx.fill();
   }
 

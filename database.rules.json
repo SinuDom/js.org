@@ -1,0 +1,35 @@
+{
+  "rules": {
+    "rooms": {
+      "$code": {
+        ".read": "$code.matches(/^[A-Z]{4}$/)",
+        ".write": "$code.matches(/^[A-Z]{4}$/)",
+        "host": { ".validate": "newData.isString() && newData.val().length <= 40" },
+        "created": { ".validate": "newData.isNumber()" },
+        "player": {
+          ".validate": "newData.child('id').isString() && newData.parent().child('host').exists()",
+          "id": { ".validate": "newData.val().length <= 40" },
+          "at": { ".validate": "newData.isNumber()" },
+          "$other": { ".validate": false }
+        },
+        "ready": { ".validate": "newData.isString() && newData.val().length <= 40" },
+        "verdict": {
+          ".validate": "newData.hasChildren(['n', 'lie', 'p'])",
+          "n": { ".validate": "newData.isNumber()" },
+          "lie": { ".validate": "newData.isBoolean()" },
+          "p": { ".validate": "newData.isString()" },
+          "$other": { ".validate": false }
+        },
+        "beats": {
+          "$beat": {
+            ".validate": "newData.hasChildren(['p', 't'])",
+            "p": { ".validate": "newData.isString() && newData.val().length <= 40" },
+            "t": { ".validate": "newData.isNumber()" },
+            "$other": { ".validate": false }
+          }
+        },
+        "$other": { ".validate": false }
+      }
+    }
+  }
+}

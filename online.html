@@ -11,21 +11,40 @@
 </head>
 <body>
 
-<!-- Host: creates the room, sees the chart and can secretly force the verdict -->
+<!-- Lobby: join with a code or start a room -->
+<main class="player" id="lobby" hidden>
+  <h1>Rhythm<br><span>Polygraph</span></h1>
+  <p class="player-instr">Two players, two devices. One runs the machine, the other takes the test.</p>
+  <form class="join" id="join-form" novalidate>
+    <label class="label" for="join-code">Room code</label>
+    <input id="join-code" class="code-input" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false" maxlength="4" placeholder="ABCD" aria-describedby="join-error">
+    <button class="primary" type="submit">Join room</button>
+    <span class="flash" id="join-error" role="alert"></span>
+  </form>
+  <div class="divider"><span>or</span></div>
+  <button id="btn-create" type="button">Start a new room</button>
+  <a class="mode-link" href="index.html">Play on one device →</a>
+</main>
+
+<main class="player" id="setup-view" hidden>
+  <h1>Rhythm<br><span>Polygraph</span></h1>
+  <p class="player-instr">Online play is not available right now. Try again later, or <a class="mode-link" href="index.html">play on one device</a>.</p>
+</main>
+
+<!-- Host: creates the room and sees the chart -->
 <div class="wrap" id="host-view" hidden>
   <header>
-    <h1>Rhythm<br><span>Polygraph</span></h1>
+    <h1><span class="h-plain" id="h-a">Rhythm</span><br><span id="h-b">Polygraph</span></h1>
     <div class="serial">MODEL RP-2 · REMOTE SESSION<br>CHART SPEED 10 S / SCREEN<br><a class="mode-link" href="index.html">Play on one device →</a></div>
   </header>
 
   <section class="room" aria-label="Room">
-    <div class="room-code"><span class="label">Room</span><b id="room-code">······</b></div>
+    <div class="room-code"><span class="label">Room code</span><b id="room-code">····</b><span class="join-where">Enter it at <span id="join-where"></span></span></div>
     <div class="share">
-      <label for="share-link"><span class="label">Send this link to the other player</span><input id="share-link" readonly value="Opening room…"></label>
+      <label for="share-link"><span class="label">Or send this link</span><input id="share-link" readonly value="Opening room…"></label>
       <button id="btn-copy" type="button" disabled>Copy link</button>
     </div>
     <div class="conn"><i class="lamp" id="conn-lamp"></i><span id="conn-status">Opening room…</span></div>
-    <div class="rig" title="Only you can see this">Override <b id="rig-val">off</b></div>
   </section>
 
   <section class="chart" id="pad" aria-label="Strip chart of the other player's button presses">
@@ -42,8 +61,6 @@
 
   <div class="controls">
     <button class="primary" id="btn-q" type="button">Question asked<kbd>Space</kbd></button>
-    <button id="btn-truth" type="button">Force truth<kbd>T</kbd></button>
-    <button id="btn-lie" type="button">Force lie<kbd>L</kbd></button>
     <button id="btn-reset" type="button">Reset session</button>
     <span class="flash" id="flash" role="status" aria-live="polite"></span>
   </div>
@@ -74,10 +91,10 @@
       <section>
         <p class="label" style="margin:0 0 10px">Procedure</p>
         <ol class="procedure">
-          <li><span>Send the link. The other player presses their button in <b>one steady rhythm</b>. Six even beats calibrate the machine.</span></li>
+          <li><span>Give the other player the <b>room code</b>. They press their button in <b>one steady rhythm</b>. Six even beats calibrate the machine.</span></li>
           <li><span>Ask the question on your call or chat, then press <b>Space</b> the moment it has been asked.</span></li>
           <li><span>They answer <b>without breaking the rhythm</b>. The next 10 beats are measured and they see TRUTH or LIE.</span></li>
-          <li><span>Secret: press <b>T</b> or <b>L</b> before the verdict to force TRUTH or LIE. Press it again to cancel. If their rhythm is way off (stress <span id="way-off">70</span>+ or they stop pressing), the machine's own verdict wins.</span></li>
+          <li><span>Read the full analysis here. They keep pressing while the machine recalibrates for the next question.</span></li>
         </ol>
       </section>
       <section>
@@ -92,7 +109,7 @@
           </table>
         </div>
       </section>
-      <p class="fine">Button presses travel straight between the two browsers. The other player never sees the chart, the numbers or your override. Built for parties and pranks: rhythm changes show nervousness or distraction, which is not the same thing as lying.</p>
+      <p class="fine">The other player sees only their button and the verdict. Built for parties: rhythm changes show nervousness or distraction, which is not the same thing as lying.</p>
     </div>
   </div>
 </div>
@@ -100,6 +117,7 @@
 <!-- Player: joins with the link, sees only the button and the verdict -->
 <main class="player" id="player-view" hidden>
   <h1>Rhythm<br><span>Polygraph</span></h1>
+  <span class="label" id="p-room"></span>
   <div class="conn" role="status" aria-live="polite"><i class="lamp" id="p-lamp"></i><span id="p-status">Connecting…</span></div>
   <p class="player-instr">Press the button in one steady rhythm and keep going. Answer every question out loud without breaking the beat.</p>
   <button class="big-button" id="press" type="button" disabled>Press</button>
@@ -107,7 +125,9 @@
   <button id="p-retry" type="button" hidden>Try again</button>
 </main>
 
-<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="firebase-config.js"></script>
 <script src="polygraph.js"></script>
 <script src="online.js"></script>
 </body>

@@ -23,18 +23,26 @@ It is a party game: a change in rhythm shows nervousness or distraction, not pro
 
 ## Play online (`online.html`)
 
-1. Open `online.html`. It creates a room and shows a link to send to the other player.
-2. The other player opens the link. They see only a big button and, after each question, **TRUTH** or **LIE**. No chart, no numbers.
-3. You see their rhythm live on the chart. Ask a question on your call or chat and press **Space**.
-4. Secret override: press **T** (or the Force truth button) to force TRUTH, **L** to force LIE, and the same key again to cancel. It applies to the next verdict. The other player never sees it.
-5. If their rhythm is way off (stress index 70 or more, or they stop pressing), your override is ignored and the machine's own verdict is used.
+1. One player opens `online.html` and taps **Start a new room**. They get a 4-letter room code and see the chart.
+2. The other player opens `online.html`, types the code (or opens the shared link) and gets a big button.
+3. Ask a question on your call or chat and press **Space**. The player sees only **TRUTH** or **LIE**.
 
-Button presses go straight between the two browsers over WebRTC. The free [PeerJS](https://peerjs.com) server only introduces them, so there is nothing to host besides the static files.
+Rooms are synced through Firebase Realtime Database.
+
+### Firebase setup
+
+1. Create a project at [console.firebase.google.com](https://console.firebase.google.com).
+2. **Build → Realtime Database → Create database** (any location, start in locked mode).
+3. In the database's **Rules** tab, paste the contents of `database.rules.json` and publish.
+4. **Project settings → Your apps → Web app** (`</>`), register it, and copy the `firebaseConfig` values into `firebase-config.js`. Make sure `databaseURL` is included.
+
+Until `firebase-config.js` is filled in, `online.html` shows that online play is not available. The one-device version works without it.
 
 ## Files
 
 - `index.html`: one-device version
-- `online.html`, `online.js`: online room version
+- `online.html`, `online.js`: online rooms
+- `firebase-config.js`, `database.rules.json`, `firebase.json`: Firebase settings and security rules
 - `polygraph.js`, `polygraph.css`: shared analyser, chart and styles
 
 ## Run it
