@@ -1,6 +1,5 @@
 // Rhythm Polygraph engine: beat analysis, verdict panel and strip chart.
 // RhythmPolygraph(opts) wires itself to the page's polygraph markup.
-//   opts.pointerInput  count left-button presses on the page as beats (solo mode)
 //   opts.clock         time source in ms; beats passed to api.beat() use the same clock
 //   opts.decide(q)     may change q.result before the verdict is shown
 //   opts.onVerdict(q)  called after a verdict is shown
@@ -74,14 +73,6 @@ window.RhythmPolygraph = function RhythmPolygraph(options) {
     while (clicks.length > 40 && clicks[0] < cutoff) clicks.shift();
     while (intervals.length > 40 && intervals[0].t < cutoff) intervals.shift();
     $('hint').hidden = true;
-  }
-
-  if (opts.pointerInput) {
-    document.addEventListener('pointerdown', (e) => {
-      if (e.button !== 0) return;
-      if (e.target.closest('button, a, input, textarea, select, .log-wrap')) return;
-      beat();
-    });
   }
 
   document.addEventListener('keydown', (e) => {

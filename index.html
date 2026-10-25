@@ -4,22 +4,59 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Rhythm Polygraph</title>
-<meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600&family=Big+Shoulders+Display:wght@700;800&family=JetBrains+Mono:wght@400;600&display=swap">
 <link rel="stylesheet" href="polygraph.css">
 </head>
 <body>
-<div class="wrap">
+
+<!-- Lobby: join with a code or start a room -->
+<main class="player" id="lobby" hidden>
+  <h1>Rhythm<br><span>Polygraph</span></h1>
+  <p class="player-instr">Two players, two devices. One runs the machine, the other takes the test.</p>
+  <form class="join" id="join-form" novalidate>
+    <label class="label" for="join-code">Room code</label>
+    <input id="join-code" class="code-input" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false" maxlength="4" placeholder="ABCD" aria-describedby="join-error">
+    <button class="primary" type="submit">Join room</button>
+    <span class="flash" id="join-error" role="alert"></span>
+  </form>
+  <div class="divider"><span>or</span></div>
+  <form class="join" id="create-form" novalidate>
+    <button id="btn-create" type="button">Start a new room</button>
+    <div class="join" id="create-box" hidden>
+      <label class="label" for="create-pass">Passcode</label>
+      <input id="create-pass" class="pass-input" type="password" inputmode="numeric" autocomplete="off" aria-describedby="create-error">
+      <button class="primary" type="submit">Create room</button>
+      <span class="flash" id="create-error" role="alert"></span>
+    </div>
+  </form>
+</main>
+
+<main class="player" id="setup-view" hidden>
+  <h1>Rhythm<br><span>Polygraph</span></h1>
+  <p class="player-instr">Online play is not available right now. Try again later.</p>
+</main>
+
+<!-- Host: creates the room and sees the chart -->
+<div class="wrap host" id="host-view" hidden>
   <header>
     <h1>Rhythm<br><span>Polygraph</span></h1>
-    <div class="serial">MODEL RP-2 · MOTOR-RHYTHM ANALYSER<br>CHART SPEED 10 S / SCREEN<br><a class="mode-link" href="online.html">Play online with a friend →</a></div>
+    <div class="serial">MODEL RP-2 · REMOTE SESSION<br>CHART SPEED 10 S / SCREEN</div>
   </header>
 
-  <section class="chart" id="pad" aria-label="Tap pad: click the left mouse button here at a steady tempo">
+  <section class="room" aria-label="Room">
+    <div class="room-code"><span class="label">Room code</span><b id="room-code">····</b><span class="join-where">Enter it at <span id="join-where"></span></span></div>
+    <div class="share">
+      <label for="share-link"><span class="label">Or send this link</span><input id="share-link" readonly value="Opening room…"></label>
+      <button id="btn-copy" type="button" disabled>Copy link</button>
+    </div>
+    <div class="conn"><i class="lamp" id="conn-lamp"></i><span id="conn-status">Opening room…</span></div>
+  </section>
+
+  <section class="chart" id="pad" aria-label="Strip chart of the other player's button presses">
     <canvas id="chart"></canvas>
-    <div class="hint" id="hint">Click here with the left mouse button at a steady tempo</div>
+    <div class="hint" id="hint">Waiting for the other player's button presses</div>
   </section>
 
   <section class="gauges" aria-label="Live readings">
@@ -52,8 +89,8 @@
         <div class="meter-scale"><span>calm</span><span class="th" id="v-threshold"></span><span>stressed</span></div>
       </div>
       <ul class="reasons" id="reasons">
-        <li>The analyser compares the beats you click right after the question with your own steady rhythm before it.</li>
-        <li>Slowing down, speeding up, uneven beats and hesitations all raise the stress index.</li>
+        <li>The other player only sees a big button and the final TRUTH or LIE.</li>
+        <li>You see their rhythm here, live, and every number behind each verdict.</li>
       </ul>
     </section>
 
@@ -61,10 +98,10 @@
       <section>
         <p class="label" style="margin:0 0 10px">Procedure</p>
         <ol class="procedure">
-          <li><span>Subject clicks the <b>left mouse button</b> on the chart, in one steady tempo. Six even beats calibrate the machine.</span></li>
-          <li><span>Ask the question out loud, then press <b>Space</b> the moment it has been asked.</span></li>
-          <li><span>Subject answers <b>without breaking the rhythm</b>. The next 10 beats are measured.</span></li>
-          <li><span>Read the verdict. Keep clicking: the machine recalibrates for the next question.</span></li>
+          <li><span>Give the other player the <b>room code</b>. They press their button in <b>one steady rhythm</b>. Six even beats calibrate the machine.</span></li>
+          <li><span>Ask the question on your call or chat, then press <b>Space</b> (or tap <b>Question asked</b>) the moment it has been asked.</span></li>
+          <li><span>They answer <b>without breaking the rhythm</b>. The next 10 beats are measured and they see TRUTH or LIE.</span></li>
+          <li><span>Read the full analysis here. They keep pressing while the machine recalibrates for the next question.</span></li>
         </ol>
       </section>
       <section>
@@ -79,12 +116,26 @@
           </table>
         </div>
       </section>
-      <p class="fine">Everything runs in your browser. No clicks or answers leave this page. Built for parties and fun: rhythm changes show nervousness or distraction, which is not the same thing as lying.</p>
+      <p class="fine">The other player sees only their button and the verdict. Built for parties: rhythm changes show nervousness or distraction, which is not the same thing as lying.</p>
     </div>
   </div>
 </div>
 
+<!-- Player: joins with the link, sees only the button and the verdict -->
+<main class="player" id="player-view" hidden>
+  <h1>Rhythm<br><span>Polygraph</span></h1>
+  <span class="label" id="p-room"></span>
+  <div class="conn" role="status" aria-live="polite"><i class="lamp" id="p-lamp"></i><span id="p-status">Connecting…</span></div>
+  <p class="player-instr">Press the button in one steady rhythm and keep going. Answer every question out loud without breaking the beat.</p>
+  <button class="big-button" id="press" type="button" disabled>Press</button>
+  <div class="player-verdict" aria-live="assertive"><div class="stamp" id="p-stamp" hidden></div></div>
+  <button id="p-retry" type="button" hidden>Try again</button>
+</main>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="firebase-config.js"></script>
 <script src="polygraph.js"></script>
-<script>RhythmPolygraph({ pointerInput: true });</script>
+<script src="online.js"></script>
 </body>
 </html>

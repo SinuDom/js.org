@@ -203,8 +203,6 @@ tr.example td.v-truth, tr.example td.v-lie { opacity: 0.7; }
 }
 .meter-scale .th { position: absolute; left: var(--threshold, 50%); transform: translateX(-50%); }
 
-.mode-link { display: inline-block; margin-top: 8px; font: 600 13px/1.3 var(--font-body); color: var(--pen); letter-spacing: 0; }
-.mode-link:focus-visible { outline: 2px solid var(--pen); outline-offset: 2px; }
 
 /* Online mode: host room bar */
 .room {

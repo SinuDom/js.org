@@ -1,7 +1,7 @@
 // Rhythm Polygraph online mode, synced through Firebase Realtime Database.
-// online.html            lobby: join with a code or start a room
-// online.html?host       the machine: creates a room and shows the chart
-// online.html?room=CODE  the subject: a button and the verdict
+// index.html            lobby: join with a code or start a room
+// index.html?host       the machine: creates a room and shows the chart
+// index.html?room=CODE  the subject: a button and the verdict
 //
 // rooms/CODE = { host, created, player: {id, at}, ready, beats: {push: {p, t}}, verdict: {n, lie, p} }
 (() => {
@@ -244,7 +244,7 @@
     roomRef = db.ref('rooms/' + code);
     roomRef.onDisconnect().remove();
 
-    const page = new URL('online.html', location.href);
+    const page = new URL('./', location.href);
     $('room-code').textContent = code;
     $('join-where').textContent = page.host + page.pathname;
     page.search = '?room=' + code;
