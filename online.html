@@ -32,86 +32,24 @@
 </main>
 
 <!-- Host: creates the room and sees the chart -->
-<div class="wrap" id="host-view" hidden>
-  <header>
-    <h1>Rhythm<br><span>Polygraph</span></h1>
-    <div class="serial">MODEL RP-2 · REMOTE SESSION<br>CHART SPEED 10 S / SCREEN<br><a class="mode-link" href="index.html">Play on one device →</a></div>
-  </header>
-
-  <section class="room" aria-label="Room">
-    <div class="room-code"><span class="label">Room code</span><b id="room-code">····</b><span class="join-where">Enter it at <span id="join-where"></span></span></div>
-    <div class="share">
-      <label for="share-link"><span class="label">Or send this link</span><input id="share-link" readonly value="Opening room…"></label>
-      <button id="btn-copy" type="button" disabled>Copy link</button>
-    </div>
+<div class="wrap control" id="host-view" hidden>
+  <header class="ctl-bar">
+    <span class="ctl-brand">Rhythm <span>Polygraph</span></span>
+    <div class="ctl-room"><span class="label">Room</span><b id="room-code">····</b><button id="btn-copy" type="button" disabled>Copy link</button></div>
     <div class="conn"><i class="lamp" id="conn-lamp"></i><span id="conn-status">Opening room…</span></div>
-  </section>
+  </header>
 
   <section class="chart" id="pad" aria-label="Strip chart of the other player's button presses">
     <canvas id="chart"></canvas>
     <div class="hint" id="hint">Waiting for the other player's button presses</div>
   </section>
 
-  <section class="gauges" aria-label="Live readings">
-    <div class="gauge"><span class="label">Tempo</span><span class="val" id="g-bpm">—<small>BPM</small></span></div>
-    <div class="gauge"><span class="label">Beat</span><span class="val" id="g-ms">—<small>ms</small></span></div>
-    <div class="gauge"><span class="label">Steadiness</span><span class="val" id="g-steady">—<small>%</small></span></div>
-    <div class="gauge"><span class="label">Status</span><span class="val status-val"><i class="lamp" id="lamp"></i><span id="g-status">Waiting for clicks</span></span></div>
-  </section>
-
-  <div class="controls">
+  <div class="ctl-row">
+    <span class="status-val"><i class="lamp" id="lamp"></i><span id="g-status">Waiting for clicks</span></span>
     <button class="primary" id="btn-q" type="button">Question asked<kbd>Space</kbd></button>
-    <button id="btn-reset" type="button">Reset session</button>
-    <span class="flash" id="flash" role="status" aria-live="polite"></span>
+    <div class="stamp idle" id="stamp">Awaiting question</div>
   </div>
-
-  <div class="lower">
-    <section class="verdict" aria-live="polite">
-      <span class="label" id="v-title">Verdict</span>
-      <div class="stamp-row">
-        <div class="stamp idle" id="stamp">Awaiting question</div>
-        <div class="meta" id="v-meta" hidden>
-          <span class="label">Stress index</span>
-          <span class="big" id="v-score">0 / 100</span>
-          <span class="label" id="v-conf">Confidence 0%</span>
-        </div>
-      </div>
-      <div class="progress" id="v-progress" hidden><i id="v-progress-bar"></i></div>
-      <div id="v-meter" hidden>
-        <div class="meter"><i id="v-meter-bar"></i></div>
-        <div class="meter-scale"><span>calm</span><span class="th" id="v-threshold"></span><span>stressed</span></div>
-      </div>
-      <ul class="reasons" id="reasons">
-        <li>The other player only sees a big button and the final TRUTH or LIE.</li>
-        <li>You see their rhythm here, live, and every number behind each verdict.</li>
-      </ul>
-    </section>
-
-    <div class="side">
-      <section>
-        <p class="label" style="margin:0 0 10px">Procedure</p>
-        <ol class="procedure">
-          <li><span>Give the other player the <b>room code</b>. They press their button in <b>one steady rhythm</b>. Six even beats calibrate the machine.</span></li>
-          <li><span>Ask the question on your call or chat, then press <b>Space</b> the moment it has been asked.</span></li>
-          <li><span>They answer <b>without breaking the rhythm</b>. The next 10 beats are measured and they see TRUTH or LIE.</span></li>
-          <li><span>Read the full analysis here. They keep pressing while the machine recalibrates for the next question.</span></li>
-        </ol>
-      </section>
-      <section>
-        <p class="label" style="margin:0 0 10px">Session log</p>
-        <div class="log-wrap">
-          <table>
-            <thead><tr><th>Q</th><th>Verdict</th><th>Stress</th><th>Tempo Δ</th><th>Time</th></tr></thead>
-            <tbody id="log">
-              <tr class="example"><td>ex.</td><td class="v-truth">TRUTH</td><td>18</td><td>+2.1%</td><td>example</td></tr>
-              <tr class="example"><td>ex.</td><td class="v-lie">LIE</td><td>74</td><td>+19.4%</td><td>example</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
-      <p class="fine">The other player sees only their button and the verdict. Built for parties: rhythm changes show nervousness or distraction, which is not the same thing as lying.</p>
-    </div>
-  </div>
+  <span class="flash" id="flash" role="status" aria-live="polite"></span>
 </div>
 
 <!-- Player: joins with the link, sees only the button and the verdict -->

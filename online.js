@@ -149,15 +149,14 @@
       btnDownAt = null;
     }, true);
 
+    let shareLink = '';
     $('btn-copy').addEventListener('click', async (e) => {
       e.currentTarget.blur();
-      const input = $('share-link');
       try {
-        await navigator.clipboard.writeText(input.value);
+        await navigator.clipboard.writeText(shareLink);
         poly.flash('Link copied.');
       } catch {
-        input.select();
-        poly.flash('Press Ctrl+C (or Cmd+C) to copy the selected link.');
+        poly.flash('Copy this link: ' + shareLink);
       }
     });
 
@@ -190,10 +189,9 @@
     roomRef.onDisconnect().remove();
 
     const page = new URL('online.html', location.href);
-    $('room-code').textContent = code;
-    $('join-where').textContent = page.host + page.pathname;
     page.search = '?room=' + code;
-    $('share-link').value = page.href;
+    shareLink = page.href;
+    $('room-code').textContent = code;
     $('btn-copy').disabled = false;
     status('cal', 'Waiting for the other player to join');
 

@@ -24,7 +24,9 @@ window.RhythmPolygraph = function RhythmPolygraph(options) {
   RhythmPolygraph.CFG = CFG;
   RhythmPolygraph.confidenceFor = (score) => Math.round(Math.min(97, 55 + Math.abs(score - CFG.threshold) * 0.84));
 
-  const $ = (id) => document.getElementById(id);
+  // Pages may leave out any panel; missing elements become detached stand-ins.
+  const spare = {};
+  const $ = (id) => document.getElementById(id) || (spare[id] ??= document.createElement('div'));
   const canvas = $('chart'), ctx = canvas.getContext('2d');
   const pad = $('pad');
 
