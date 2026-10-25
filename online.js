@@ -43,18 +43,21 @@
   else if (params.has('host')) hostGate();
   else lobby();
 
-  // The passcode for starting a room lives in index.html: <meta name="room-passcode">.
-  async function roomPasscode() {
-    const res = await fetch('index.html', { cache: 'no-store' });
-    if (!res.ok) throw new Error('index.html ' + res.status);
-    const doc = new DOMParser().parseFromString(await res.text(), 'text/html');
-    return doc.querySelector('meta[name="room-passcode"]')?.content || null;
+  // The passcode for starting a room is this device's local time as HHMM (14:35 -> 1435).
+  // The previous minute also counts, in case the clock ticks over while typing.
+  function passcodeOk(value) {
+    const typed = String(value).replace(/\D/g, '');
+    const now = Date.now();
+    return [0, 1].some((m) => {
+      const d = new Date(now - m * 60000);
+      const h = d.getHours(), mm = String(d.getMinutes()).padStart(2, '0');
+      const h12 = h % 12 || 12;
+      return [String(h).padStart(2, '0') + mm, h + mm, String(h12).padStart(2, '0') + mm, h12 + mm].includes(typed);
+    });
   }
 
   async function hostGate() {
-    let ok = false;
-    try { ok = (await roomPasscode()) === load('rp-pass'); } catch {}
-    if (ok) return host();
+    if (load('rp-host-ok') === '1') return host();
     history.replaceState(null, '', location.pathname);
     lobby(true);
   }
@@ -89,17 +92,12 @@
     pass.addEventListener('input', () => { $('create-error').textContent = ''; });
     $('create-form').addEventListener('submit', async (e) => {
       e.preventDefault();
-      let want;
-      try { want = await roomPasscode(); } catch {
-        $('create-error').textContent = 'Could not check the passcode. Check your connection and try again.';
-        return;
-      }
-      if (!want || pass.value !== want) {
+      if (!passcodeOk(pass.value)) {
         $('create-error').textContent = 'Wrong passcode.';
         pass.select();
         return;
       }
-      save('rp-pass', pass.value);
+      save('rp-host-ok', '1');
       location.search = '?host';
     });
     if (askPass) openPass();
