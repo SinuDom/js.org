@@ -268,16 +268,38 @@ tr.example td.v-truth, tr.example td.v-lie { opacity: 0.7; }
 .divider { display: flex; align-items: center; gap: 12px; width: min(100%, 320px); color: var(--muted); font: 600 11px/1 var(--font-data); text-transform: uppercase; letter-spacing: 0.12em; }
 .divider::before, .divider::after { content: ""; flex: 1; height: 1px; background: var(--line); }
 
-/* Online mode: stripped-down control view */
-.control { gap: 14px; padding-block: 16px 32px; }
-.ctl-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 20px; }
-.ctl-brand { font: 800 26px/1 var(--font-display); text-transform: uppercase; letter-spacing: 0.02em; }
-.ctl-brand span { color: var(--alarm); }
-.ctl-room { display: flex; align-items: center; gap: 12px; }
-.ctl-room b { font: 600 28px/1 var(--font-data); letter-spacing: 0.18em; }
-.ctl-room button { padding: 9px 12px; font-size: 13px; }
-.ctl-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; }
-.ctl-row .status-val { flex: 1 1 200px; font: 600 15px/1.25 var(--font-body); display: flex; align-items: center; gap: 8px; }
-.ctl-row .stamp { font-size: 34px; border-width: 3px; padding: 6px 12px 2px; }
-.ctl-row .stamp.idle, .ctl-row .stamp.measuring { font-size: 20px; border-width: 2px; }
-.control .flash { -webkit-user-select: text; user-select: text; overflow-wrap: anywhere; }
+/* Online mode: control view on phones */
+.host #btn-q { -webkit-touch-callout: none; touch-action: manipulation; }
+@media (hover: none) {
+  .host kbd { display: none; }
+}
+@media (max-width: 760px) {
+  .host { padding-block: 16px 120px; gap: 14px; }
+  .host header h1 { font-size: 34px; }
+  .host .serial { display: none; }
+  .host .room { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; padding: 12px; gap: 8px 12px; }
+  .host .room-code b { font-size: 34px; }
+  .host .share label { display: none; }
+  .host #btn-copy { min-height: 48px; }
+  .host .conn { grid-column: 1 / -1; }
+  /* verdict right under the chart, readings after it */
+  .host .lower { display: contents; }
+  .host .verdict { order: 1; }
+  .host .gauges { order: 2; }
+  .host .side { order: 3; }
+  .host .controls {
+    position: fixed; inset: auto 0 0 0; z-index: 20;
+    display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 10px;
+    background: var(--panel); border-top: 1px solid var(--grid-strong);
+    padding-top: 10px;
+    padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  .host #btn-q { min-height: 60px; font-size: 18px; }
+  .host #btn-reset { min-height: 60px; font-size: 13px; padding-inline: 12px; }
+  .host .controls .flash { grid-column: 1 / -1; min-height: 0; }
+  .host .controls .flash:empty { display: none; }
+  .host .verdict { min-height: 0; }
+  .host .lower { gap: 14px; }
+}

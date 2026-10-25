@@ -81,12 +81,9 @@
     let verdictN = 0;
     let sides = [];      // {t, s} for the current player's presses
     let control = false; // starts off on every load
-    let spaceDownAt = null;
-    let spaceQ = null;   // question marked by the Space press that is still held
-    let btnDownAt = null;
-    let btnHold = null;  // {ms, at} of the last Question asked button press
+    let holdAt = null;   // when Space or the question button went down
+    let heldQ = null;    // question marked by the press that is still held
 
-    // Only presses made while the answer is measured count; the most pressed part wins.
     function sideLean(q) {
       const n = { l: 0, r: 0, c: 0 };
       for (const b of sides) if (b.t > q.t && b.t <= q.end) n[b.s]++;
@@ -107,19 +104,19 @@
     const poly = RhythmPolygraph({
       clock: () => performance.now() + (offset ?? 0),
       silentReset: true,
+      questionButton: false,
       tempoLabels: () => (control ? ['SLOW', 'FAST'] : ['SLOWER', 'FASTER']),
       onQuestion(q) {
         q.c = control;
         if (!control) return;
-        if (spaceDownAt !== null) spaceQ = q;
-        else if (btnHold && performance.now() - btnHold.at < 600) q.lean = btnHold.ms > HOLD_MS ? 'lie' : 'truth';
+        if (holdAt !== null) heldQ = q;
         else q.lean = 'truth';
       },
       decide(q) {
         const r = q.result;
         let lean;
         if (q.c) {
-          lean = spaceQ === q ? 'lie' : q.lean;
+          lean = heldQ === q ? 'lie' : q.lean;
           if (r.freeze || r.score >= STEADY_LIMIT) lean = null;
         } else {
           lean = sideLean(q);
@@ -131,32 +128,52 @@
       },
     });
 
+    const pressStart = () => { holdAt = performance.now(); };
+    const pressEnd = () => {
+      if (holdAt === null) return;
+      const ms = performance.now() - holdAt;
+      holdAt = null;
+      if (heldQ) { heldQ.lean = ms > HOLD_MS ? 'lie' : 'truth'; heldQ = null; }
+    };
+    const toggleControl = () => { control = !control; };
+
     // Capture phase, so the press is timed before the analyser marks the question.
     window.addEventListener('keydown', (e) => {
       if (e.repeat || e.ctrlKey || e.metaKey || e.altKey || e.target.closest('input, textarea')) return;
-      if (e.code === 'Space') spaceDownAt = performance.now();
-      else if (e.code === 'KeyC') control = !control;
+      if (e.code === 'Space') pressStart();
+      else if (e.code === 'KeyC') toggleControl();
     }, true);
-    window.addEventListener('keyup', (e) => {
-      if (e.code !== 'Space' || spaceDownAt === null) return;
-      const ms = performance.now() - spaceDownAt;
-      spaceDownAt = null;
-      if (spaceQ) { spaceQ.lean = ms > HOLD_MS ? 'lie' : 'truth'; spaceQ = null; }
-    }, true);
-    $('btn-q').addEventListener('pointerdown', () => { btnDownAt = performance.now(); }, true);
-    $('btn-q').addEventListener('pointerup', () => {
-      if (btnDownAt !== null) btnHold = { ms: performance.now() - btnDownAt, at: performance.now() };
-      btnDownAt = null;
-    }, true);
+    window.addEventListener('keyup', (e) => { if (e.code === 'Space') pressEnd(); }, true);
 
-    let shareLink = '';
+    // The question button marks the question on touch, like Space, and times the hold.
+    const qBtn = $('btn-q');
+    qBtn.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0) return;
+      e.preventDefault();
+      qBtn.setPointerCapture?.(e.pointerId);
+      pressStart();
+      poly.askQuestion();
+    });
+    for (const ev of ['pointerup', 'pointercancel']) qBtn.addEventListener(ev, pressEnd);
+    qBtn.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); poly.askQuestion(); } });
+    qBtn.addEventListener('contextmenu', (e) => e.preventDefault());
+
+    // Double-tap on the chart does what C does.
+    let lastChartTap = 0;
+    $('pad').addEventListener('pointerdown', (e) => {
+      const t = performance.now();
+      if (t - lastChartTap < 350) { toggleControl(); lastChartTap = 0; } else lastChartTap = t;
+    });
+
     $('btn-copy').addEventListener('click', async (e) => {
       e.currentTarget.blur();
+      const input = $('share-link');
       try {
-        await navigator.clipboard.writeText(shareLink);
+        await navigator.clipboard.writeText(input.value);
         poly.flash('Link copied.');
       } catch {
-        poly.flash('Copy this link: ' + shareLink);
+        input.select();
+        poly.flash('Press Ctrl+C (or Cmd+C) to copy the selected link.');
       }
     });
 
@@ -189,9 +206,10 @@
     roomRef.onDisconnect().remove();
 
     const page = new URL('online.html', location.href);
-    page.search = '?room=' + code;
-    shareLink = page.href;
     $('room-code').textContent = code;
+    $('join-where').textContent = page.host + page.pathname;
+    page.search = '?room=' + code;
+    $('share-link').value = page.href;
     $('btn-copy').disabled = false;
     status('cal', 'Waiting for the other player to join');
 

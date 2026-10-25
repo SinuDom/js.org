@@ -7,6 +7,7 @@
 //   opts.onQuestion(q) called when a question is marked
 //   opts.penTint()     token name for the pen head colour (default 'pen')
 //   opts.tempoLabels() [slow, fast] words for the CH2 scale (default SLOWER / FASTER)
+//   opts.questionButton false: the page wires #btn-q itself
 window.RhythmPolygraph = function RhythmPolygraph(options) {
   'use strict';
   const opts = options || {};
@@ -90,7 +91,9 @@ window.RhythmPolygraph = function RhythmPolygraph(options) {
     askQuestion();
   });
 
-  $('btn-q').addEventListener('click', (e) => { e.currentTarget.blur(); askQuestion(); });
+  if (opts.questionButton !== false) {
+    $('btn-q').addEventListener('click', (e) => { e.currentTarget.blur(); askQuestion(); });
+  }
   $('btn-reset').addEventListener('click', (e) => { e.currentTarget.blur(); reset(); });
 
   // ---------- analysis ----------
