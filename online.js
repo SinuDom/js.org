@@ -11,8 +11,6 @@
   const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
   const STEADY_LIMIT = 70;
   const HOLD_MS = 150;
-  const SIDE_SHARE = 0.6;
-  const SIDE_MIN = 4;
   // The fraction of a beat's t says which part of the button was pressed.
   const SIDE_FRAC = { c: 0, l: 0.25, r: 0.5 };
   const sideOf = (t) => { const f = t - Math.floor(t); return f > 0.4 ? 'r' : f > 0.1 ? 'l' : 'c'; };
@@ -88,12 +86,12 @@
     let btnDownAt = null;
     let btnHold = null;  // {ms, at} of the last Question asked button press
 
+    // Only presses made while the answer is measured count; the most pressed part wins.
     function sideLean(q) {
-      const inWindow = sides.filter((b) => b.t > q.t && b.t <= q.end);
-      if (inWindow.length < SIDE_MIN) return null;
-      const share = (s) => inWindow.filter((b) => b.s === s).length / inWindow.length;
-      if (share('l') >= SIDE_SHARE) return 'lie';
-      if (share('r') >= SIDE_SHARE) return 'truth';
+      const n = { l: 0, r: 0, c: 0 };
+      for (const b of sides) if (b.t > q.t && b.t <= q.end) n[b.s]++;
+      if (n.l > n.r && n.l > n.c) return 'lie';
+      if (n.r > n.l && n.r > n.c) return 'truth';
       return null;
     }
 
