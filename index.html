@@ -25,8 +25,8 @@
   <form class="join" id="create-form" novalidate>
     <button id="btn-create" type="button">Start a new room</button>
     <div class="join" id="create-box" hidden>
-      <label class="label" for="create-pass">Passcode</label>
-      <input id="create-pass" class="pass-input" type="password" inputmode="numeric" autocomplete="off" aria-describedby="create-error">
+      <label class="label" for="create-pass">Code from your Authenticator</label>
+      <input id="create-pass" class="pass-input" inputmode="numeric" pattern="\d{3}" maxlength="3" autocomplete="one-time-code" placeholder="000" aria-describedby="create-error">
       <button class="primary" type="submit">Create room</button>
       <span class="flash" id="create-error" role="alert"></span>
     </div>

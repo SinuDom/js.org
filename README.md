@@ -25,6 +25,8 @@ It is a party game: a change in rhythm shows nervousness or distraction, not pro
 
 Rooms are synced through Firebase Realtime Database. `online.html` forwards to the site's main page, so older links keep working.
 
+Starting a room needs the current 3-digit code from the private authenticator (https://private-authenticator.netlify.app). The Netlify function `netlify/functions/check-code.mjs` checks it; set `AUTHENTICATOR_URL`, `AUTHENTICATOR_SERVICE` and `AUTHENTICATOR_API_KEY` as Netlify environment variables and redeploy. Joining a room needs only the room code.
+
 ### Firebase setup
 
 1. Create a project at [console.firebase.google.com](https://console.firebase.google.com).
@@ -38,9 +40,10 @@ Until `firebase-config.js` is filled in, the site shows that online play is not 
 
 - `index.html`, `online.js`: the lobby, the control screen and the player's button
 - `online.html`: forwards old links to `index.html`
+- `netlify/functions/check-code.mjs`: checks the authenticator code for starting a room
 - `firebase-config.js`, `database.rules.json`, `firebase.json`: Firebase settings and security rules
 - `polygraph.js`, `polygraph.css`: shared analyser, chart and styles
 
 ## Run it
 
-Static files only, no build step and no server code. Host the folder on any static host (it runs on Netlify).
+Static files plus one Netlify function, no build step. It runs on Netlify.

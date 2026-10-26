@@ -43,17 +43,19 @@
   else if (params.has('host')) hostGate();
   else lobby();
 
-  // The passcode for starting a room is this device's local time as HHMM (14:35 -> 1435).
-  // The previous minute also counts, in case the clock ticks over while typing.
-  function passcodeOk(value) {
-    const typed = String(value).replace(/\D/g, '');
-    const now = Date.now();
-    return [0, 1].some((m) => {
-      const d = new Date(now - m * 60000);
-      const h = d.getHours(), mm = String(d.getMinutes()).padStart(2, '0');
-      const h12 = h % 12 || 12;
-      return [String(h).padStart(2, '0') + mm, h + mm, String(h12).padStart(2, '0') + mm, h12 + mm].includes(typed);
-    });
+  // Starting a room needs the current 3-digit code from the private authenticator,
+  // checked server-side by netlify/functions/check-code.mjs.
+  async function checkCode(code) {
+    try {
+      const res = await fetch('/api/check-code', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ code }),
+      });
+      return await res.json();
+    } catch {
+      return { valid: false, reason: 'unreachable' };
+    }
   }
 
   async function hostGate() {
@@ -89,17 +91,39 @@
       pass.focus();
     };
     $('btn-create').addEventListener('click', openPass);
-    pass.addEventListener('input', () => { $('create-error').textContent = ''; });
-    $('create-form').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      if (!passcodeOk(pass.value)) {
-        $('create-error').textContent = 'Wrong passcode.';
-        pass.select();
+    let checking = false;
+    const submitCode = async () => {
+      const code = pass.value.replace(/\D/g, '');
+      if (checking) return;
+      if (code.length !== 3) {
+        $('create-error').textContent = 'Enter the 3-digit code.';
+        pass.focus();
         return;
       }
-      save('rp-host-ok', '1');
-      location.search = '?host';
+      checking = true;
+      $('create-error').textContent = 'Checking…';
+      const { valid, reason, retryAfterMs } = await checkCode(code);
+      checking = false;
+      if (valid) {
+        save('rp-host-ok', '1');
+        location.search = '?host';
+        return;
+      }
+      $('create-error').textContent =
+        reason === 'locked' ? `Too many attempts. Try again in ${Math.ceil((retryAfterMs || 60000) / 60000)} min.`
+        : reason === 'replayed' ? 'That code was already used. Wait for the next one.'
+        : reason === 'invalid' || reason === 'malformed' ? 'Wrong or expired code.'
+        : 'Could not check the code right now. Try again in a moment.';
+      pass.value = '';
+      pass.focus();
+    };
+    pass.addEventListener('input', () => {
+      const c = pass.value.replace(/\D/g, '').slice(0, 3);
+      if (pass.value !== c) pass.value = c;
+      if (!checking) $('create-error').textContent = '';
+      if (c.length === 3) submitCode();
     });
+    $('create-form').addEventListener('submit', (e) => { e.preventDefault(); submitCode(); });
     if (askPass) openPass();
     else input.focus();
   }
